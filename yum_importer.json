@@ -1,0 +1,6 @@
+{
+ "proxy_host" : "http://proxy",
+ "proxy_port" : 3000,
+ "proxy_username" : "",
+ "proxy_password" : "" 
+}

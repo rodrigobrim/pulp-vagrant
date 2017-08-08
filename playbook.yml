@@ -1,0 +1,172 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    proxy: "http://proxy:3000"
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
+  tasks:
+
+  - name: Hide internal proxy IP - Comment out this block after set your proxy IP in the proxy variable.
+    copy:
+      src: /etc/hosts
+      dest: /etc/hosts
+
+  - name: Ensure hostname is correct.
+    lineinfile:
+      line: "192.168.60.21      pulp1.dev"
+      path: /etc/hosts
+
+  - name: Ensure proxy for yum.
+    lineinfile:
+      line: "proxy={{ proxy }}"
+      path: /etc/yum.conf
+
+  - name: Install pulp pub repo.
+    get_url:
+      url: https://repos.fedorapeople.org/repos/pulp/pulp/rhel-pulp.repo
+      dest: /etc/yum.repos.d
+
+  - name: Install packages.
+    yum:
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - mongodb-server
+      - qpid-cpp-server
+      - qpid-cpp-server-linearstore
+      - pulp-server
+      - python-gofer-qpid
+      - python-qpid
+      - qpid-tools
+      - pulp-rpm-plugins
+      - pulp-puppet-plugins
+      - pulp-docker-plugins
+      - pulp-admin-client
+      - pulp-rpm-admin-extensions
+      - pulp-puppet-admin-extensions
+      - pulp-docker-admin-extensions
+      - pulp-consumer-client
+      - pulp-rpm-consumer-extensions
+      - pulp-puppet-consumer-extensions
+      - pulp-agent
+      - pulp-rpm-handlers
+      - pulp-rpm-yumplugins
+      - pulp-puppet-handlers
+      - python-gofer-qpid
+
+  - name: Ensure pulp proxy config file is present.
+    copy:
+      src: yum_importer.json
+      dest: /etc/pulp/server/plugins.conf.d/
+
+  - name: Ensure mongod is enabled/started.
+    systemd:
+      name: mongod
+      state: started
+      enabled: yes
+
+  - name: Ensure qpidd is enabled/started.
+    systemd:
+      name: qpidd
+      state: started
+      enabled: yes
+
+  - name: Ensure /etc/pki/pulp/rsa.key is present.
+    file:
+      path: /etc/pki/pulp/rsa.key
+      state: file
+    register: keys_check
+    changed_when: False
+    ignore_errors: True
+
+  - name: Generate pulp keys.
+    command: pulp-gen-key-pair
+    when: keys_check.state == "absent"
+
+  - name: Ensure /etc/pki/pulp/ca.key is present.
+    file:
+      path: /etc/pki/pulp/ca.key
+      state: file
+    register: keys_check
+    changed_when: False
+    ignore_errors: True
+
+  - name: Generate pulp ca certificate.
+    command: pulp-gen-ca-certificate
+    when: keys_check.state == "absent"
+
+  - name: Check pulp database.
+    command: pulp-manage-db --dry-run
+    become_user: apache
+    register: db_check
+    ignore_errors: True
+    changed_when: False
+
+  - name: Stop daemons.
+    systemd:
+      name: "{{ item }}"
+      state: stopped
+    with_items:
+      - pulp_workers
+      - pulp_celerybeat
+      - pulp_resource_manager
+    when: db_check.rc != 0
+
+  - name: Initialize pulp database.
+    command: pulp-manage-db
+    become_user: apache
+    when: db_check.rc != 0
+
+  - name: Ensure pulp client is configured.
+    lineinfile:
+      line: "host: {{ ansible_fqdn }}"
+      path: /etc/pulp/admin/admin.conf
+      insertafter: '^\[server\]'
+
+  - name: Ensure pulp client ssl is off.
+    lineinfile:
+      line: "verify_ssl: False"
+      path: /etc/pulp/admin/admin.conf
+      insertafter: "^# verify_ssl: True"
+
+  - name: Ensure pulp consumer client and agent is configured.
+    lineinfile:
+      line: "host: {{ ansible_fqdn }}"
+      path: /etc/pulp/consumer/consumer.conf
+      insertafter: '^\[server\]'
+
+  - name: Restart apache.
+    systemd:
+      name: httpd
+      state: restarted
+      enabled: yes
+    when: db_check.rc != 0
+
+  - name: Restart pulp_workers.
+    systemd:
+      name: pulp_workers
+      state: restarted
+      enabled: yes
+    when: db_check.rc != 0
+
+  - name: Restart pulp_celerybeat.
+    systemd:
+      name: pulp_celerybeat
+      state: restarted
+      enabled: yes
+    when: db_check.rc != 0
+
+  - name: Restart pulp_resource_manager
+    systemd:
+      name: pulp_resource_manager
+      state: restarted
+      enabled: yes
+    when: db_check.rc != 0
+
+  - name: Start/enable goferd
+    systemd:
+      name: goferd
+      state: started
+      enabled: yes
