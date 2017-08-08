@@ -15,7 +15,7 @@
 
   - name: Ensure hostname is correct.
     lineinfile:
-      line: "192.168.60.21      pulp1.dev"
+      line: "127.0.0.1      pulp1.dev"
       path: /etc/hosts
 
   - name: Ensure proxy for yum.
