@@ -66,6 +66,16 @@ Check the result:
 	docker-ce.x86_64 : The open-source application container engine
 	docker-ce-selinux.noarch : SELinux Policies for the open-source application container engine
 
+# Proxy
+
+Change the proxy settings on:
+
+	playbook.yml
+	yum_importer.json
+
+All four proxy variables on yum_importer.json must be present. If you want to deploy without proxy, ajust the playbook.yml to don't copy the yum_importer.json.
+
+
 ## Tested on:
 
 	Linux Mint 18 Sarah and Gubuntu 17.04
