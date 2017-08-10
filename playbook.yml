@@ -2,7 +2,7 @@
 - hosts: all
   become: yes
   vars:
-    proxy: "http://proxy:3000"
+    proxy: "http://proxy:3127"
   environment:
     http_proxy: "{{ proxy }}"
     https_proxy: "{{ proxy }}"
