@@ -1,7 +1,4 @@
 ---
-
-# Will vai dominar o git
-
 - hosts: all
   become: yes
   vars:
