@@ -1,5 +1,7 @@
 # Pulp + Vagrant + Ansible
 
+[![demo](https://asciinema.org/a/aopQgNcC6hNoxi2gzixRKabJ3.png)](https://asciinema.org/a/aopQgNcC6hNoxi2gzixRKabJ3?autoplay=1)
+
 ## Instructions
 
 Download files:
@@ -92,7 +94,7 @@ With:
 
 ## Author
 
-Rodrigo Brim
+Rodrigo Brim [blog](https://rodirgobrim.blogspot.com.br/)
 
 ## License
 
